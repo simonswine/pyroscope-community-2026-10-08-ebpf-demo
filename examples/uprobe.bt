@@ -1,0 +1,11 @@
+#!/usr/bin/env bpftrace
+// Run from the project root: bpftrace examples/uprobe.bt
+// This uprobe is scoped to the workload executable itself; no PID is needed.
+// Includes every running instance of this exact executable.
+// Emits a tracing message without altering the Go process output.
+uprobe:./examples/workload:main.helloWorld
+{
+    printf("eBPF observed: helloWorld() called\n");
+    @calls = count();
+}
+interval:s:10 { exit(); }
