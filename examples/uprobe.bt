@@ -1,7 +1,6 @@
 #!/usr/bin/env bpftrace
-// Run from the project root: bpftrace examples/uprobe.bt
-// This uprobe is scoped to the workload executable itself; no PID is needed.
-// Includes every running instance of this exact executable.
+// Run: sudo bpftrace examples/uprobe.bt
+// Scoped to this executable file; includes all its running instances.
 // Emits a tracing message without altering the Go process output.
 uprobe:./examples/workload:main.helloWorld
 {

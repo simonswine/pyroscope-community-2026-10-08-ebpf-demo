@@ -22,14 +22,15 @@ go build -o examples/workload examples/workload.go
 Leave it running. Terminal B, from the same project root:
 
 ```sh
-sudo bpftrace examples/writes.bt
-sudo bpftrace examples/stacks.bt
+export WORKLOAD_PID="$(sudo bpftrace -q examples/discover.bt)"
+[[ "$WORKLOAD_PID" =~ ^[1-9][0-9]*$ ]] && echo "Discovered: $WORKLOAD_PID"
+# Continue only if discovery returned one positive integer.
+sudo bpftrace examples/writes.bt "$WORKLOAD_PID"
+sudo bpftrace examples/stacks.bt "$WORKLOAD_PID"
 sudo bpftrace examples/uprobe.bt
 ```
 
-No PID arguments, pgrep, comm filters, shell launcher, or `/proc` discovery. The write/stack .bt files attach a registration uprobe to `main.helloWorld` in the workload executable. They record `curtask->tgid` in a BPF map, then filter syscall/perf events against that map. Registration begins at the next function call. Entries are removed when process leaders exit. The message uprobe is directly scoped to the binary.
-
-All running instances of the same executable file are included. Both sessions must see the same actual executable file, not separate copies; don't rebuild it while running. Kernel BTF is required for `curtask` field access. This avoids the namespace PID helper that produced `get_ns_current_pid_tgid, retcode: -22`. No host PID namespace sharing is needed. Nested containers still need tracing permissions from their outer environment.
+Discover once with a uprobe on `main.helloWorld`, export the kernel PID into the tracing shell's environment, and pass it to the write and stack examples. The uprobe example requires no PID or discovery: it attaches directly to the executable and observes all its running instances. No pgrep, comm filters, shell launcher, or `/proc` discovery. Run exactly one instance: discovery selects the first observed process and exits, or returns empty after ten seconds. Stop if discovery fails. Repeat discovery after any workload restart; stale PIDs can be reused by unrelated processes. Both sessions must see the same actual executable file, not separate copies; don't rebuild it while running. Kernel BTF is required for `curtask` field access. This avoids the namespace PID helper that produced `get_ns_current_pid_tgid, retcode: -22`. No host PID namespace sharing is needed. Nested containers still need tracing permissions from their outer environment.
 
 Each trace stops after ten seconds; the demo continues until Ctrl+C. The demo prints `hello world` every 500 ms. The uprobe prints `eBPF observed: helloWorld() called`, without modifying output or confirming write success.
 
@@ -56,8 +57,11 @@ Terminal B:
 ```sh
 docker exec -t -i -w /workspace ebpf-playground bash
 # Inside:
-bpftrace examples/writes.bt
-bpftrace examples/stacks.bt
+export WORKLOAD_PID="$(bpftrace -q examples/discover.bt)"
+[[ "$WORKLOAD_PID" =~ ^[1-9][0-9]*$ ]] && echo "Discovered: $WORKLOAD_PID"
+# Continue only if discovery returned one positive integer.
+bpftrace examples/writes.bt "$WORKLOAD_PID"
+bpftrace examples/stacks.bt "$WORKLOAD_PID"
 bpftrace examples/uprobe.bt
 ```
 

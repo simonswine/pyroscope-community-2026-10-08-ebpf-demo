@@ -1,0 +1,15 @@
+#!/usr/bin/env bpftrace
+// One-shot kernel PID discovery for the already-running workload.
+// export WORKLOAD_PID="$(sudo bpftrace -q examples/discover.bt)"
+// Run exactly one instance of the workload; first observed instance wins.
+// Requires BTF. curtask->tgid avoids namespace-aware PID helpers.
+uprobe:./examples/workload:main.helloWorld
+/!@found/
+{
+    @found = 1;
+    printf("%d\n", curtask->tgid);
+    exit();
+}
+// Return empty output if the workload is not observed within ten seconds.
+interval:s:10 { exit(); }
+END { clear(@found); }

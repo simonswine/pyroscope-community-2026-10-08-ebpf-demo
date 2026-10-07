@@ -1,24 +1,10 @@
 #!/usr/bin/env bpftrace
-// Run from the project root: bpftrace examples/stacks.bt
-// Leave the Go workload running in another session.
+// Run after discovery: sudo bpftrace examples/stacks.bt "$WORKLOAD_PID"
 // Native stacks only; requires kernel BTF for curtask->tgid.
-// Discover host PIDs from the binary's uprobe, not from /proc or comm.
-uprobe:./examples/workload:main.helloWorld
-{
-    @targets[curtask->tgid] = 1;
-}
-
+// $1 is the kernel PID emitted by discover.bt, not a container-visible PID.
 profile:hz:490
-/@targets[curtask->tgid]/
+/(uint64)curtask->tgid == $1/
 {
     @stacks[ustack(20)] = count();
 }
-
-tracepoint:sched:sched_process_exit
-/curtask->pid == curtask->tgid/
-{
-    delete(@targets[curtask->tgid]);
-}
-
 interval:s:10 { exit(); }
-END { clear(@targets); }
