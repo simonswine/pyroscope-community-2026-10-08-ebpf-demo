@@ -37,6 +37,9 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+		if i % 10 == 9 {
+			fmt.Fprintln(os.Stderr, "")
+		}
 		time.Sleep(*pause)
 	}
 }
